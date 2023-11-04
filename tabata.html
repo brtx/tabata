@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        background-color: black;
+      }
+      div {
+        text-align: center;
+        font-size: 60px;
+        color: white;
+        margin-top: 0px;
+        font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS",
+          sans-serif;
+      }
+      div.counter {
+        font-size: 150px;
+      }
+      div.warmup {
+        color: aqua;
+      }
+      div.exercise {
+        color: orangered;
+      }
+      div.rest {
+        color: chartreuse;
+      }
+      div.recovery {
+        color: dodgerblue;
+      }
+      div.done {
+        color: lawngreen;
+      }
+      div.half {
+        width: 50%;
+        display: inline-block;
+      }
+      div.quarter {
+        width: 25%;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="counterLabel"></div>
+    <div class="counter" id="counter"></div>
+    <div id="upnextLabel">up next</div>
+    <div id="upnext"></div>
+    <div></div>
+    <div style="white-space: nowrap; margin: 50px">
+      <div class="half">
+        <div id="setLabel">set</div>
+        <div id="set"></div>
+      </div>
+      <div class="half">
+        <div id="cycleLabel">cycle</div>
+        <div id="cycle"></div>
+      </div>
+    </div>
+    <div style="white-space: nowrap; margin: 50px">
+      <div class="quarter" onclick="reset()">&#8634;</div>
+      <div class="quarter" onclick="back()">&#x23ee;</div>
+      <div class="quarter" onclick="playPause()">&#x23ef;</div>
+      <div class="quarter" onclick="forward()">&#x23ed;</div>
+    </div>
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const warmupInterval = parseFloat(urlParams.get("warmup") ?? 10).toFixed(
+        1
+      );
+      const exerciseInterval = parseFloat(
+        urlParams.get("exercise") ?? 7.0
+      ).toFixed(1);
+      const restInterval = parseFloat(urlParams.get("rest") ?? 3.0).toFixed(1);
+      const numberOfSets = parseInt(urlParams.get("sets") ?? 6);
+      const recoveryInterval = parseFloat(
+        urlParams.get("recovery") ?? 60.0
+      ).toFixed(1);
+      const numberOfCycles = parseInt(urlParams.get("cycles") ?? 3);
+
+      let currentCounterType;
+      let warmupCounter;
+      let exerciseCounter;
+      let restCounter;
+      let setCounter;
+      let recoveryCounter;
+      let cycleCounter;
+
+      let interval = null;
+      var audioCtx = null;
+
+      //All arguments are optional:
+      //duration of the tone in milliseconds. Default is 500
+      //frequency of the tone in hertz. default is 440
+      //volume of the tone. Default is 1, off is 0.
+      //type of tone. Possible values are sine, square, sawtooth, triangle, and custom. Default is sine.
+      //callback to use on end of tone
+      function beep(duration, frequency, volume, type, callback) {
+        console.log("beep");
+
+        if (!interval) {
+            return;
+        }
+
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext ||
+            window.webkitAudioContext ||
+            window.audioContext)();
+        }
+
+        var oscillator = audioCtx.createOscillator();
+        var gainNode = audioCtx.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+
+        if (volume) {
+          gainNode.gain.value = volume;
+        }
+        if (frequency) {
+          oscillator.frequency.value = frequency;
+        }
+        if (type) {
+          oscillator.type = type;
+        }
+        if (callback) {
+          oscillator.onended = callback;
+        }
+
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + (duration || 500) / 1000);
+      }
+
+      const setElement = (element, text) =>
+        (document.getElementById(element).innerHTML = text);
+
+      const setCounterColor = (type) => {
+        document.getElementById("counterLabel").setAttribute("class", type);
+        document
+          .getElementById("counter")
+          .setAttribute("class", `${type} counter`);
+      };
+
+      const setUpnext = (currentType) => {
+        var nextType;
+        switch (currentType) {
+          case "warmup":
+          case "rest":
+          case "recovery":
+            nextType = "exercise";
+            setElement("upnext", `exercise ${exerciseInterval}`);
+            break;
+          case "exercise":
+            if (setCounter != numberOfSets) {
+              nextType = "rest";
+              setElement("upnext", `rest ${restInterval}`);
+            } else if (
+              setCounter == numberOfSets &&
+              cycleCounter != numberOfCycles
+            ) {
+              nextType = "recovery";
+              setElement("upnext", `recovery ${recoveryInterval}`);
+            } else if (
+              setCounter == numberOfSets &&
+              cycleCounter == numberOfCycles
+            ) {
+              nextType = "done";
+              setElement("upnext", `done`);
+            }
+            break;
+        }
+
+        document.getElementById("upnext").setAttribute("class", nextType);
+      };
+
+      const displayCounter = (counter, type) => {
+        if (counter != 0) {
+          currentCounterType = type;
+          setElement("counterLabel", type);
+          setElement("counter", counter);
+          setCounterColor(type);
+          setUpnext(type);
+
+          if (counter == "3.0" || counter == "2.0") {
+            beep(500, 700, 0.6, "triangle");
+          } else if (counter == "1.0") {
+            beep(1000, 700, 0.6, "triangle");
+          }
+        }
+      };
+
+      const displayUpnext = (text) => setElement("upnext", text);
+
+      const displaySet = () =>
+        setElement("set", `${setCounter}/${numberOfSets}`);
+
+      const displayCycle = () =>
+        setElement("cycle", `${cycleCounter}/${numberOfCycles}`);
+
+      const displayCounters = () => {
+        displayCounter(warmupCounter, "warmup");
+        displayCounter(exerciseCounter, "exercise");
+        displayCounter(restCounter, "rest");
+        displayCounter(recoveryCounter, "recovery");
+        displaySet();
+        displayCycle();
+      };
+
+      const actionLoop = () => {
+        if (warmupCounter > 0) {
+          warmupCounter = (warmupCounter - 0.1).toFixed(1);
+
+          if (warmupCounter == 0) {
+            exerciseCounter = exerciseInterval;
+          }
+        } else if (exerciseCounter > 0) {
+          exerciseCounter = (exerciseCounter - 0.1).toFixed(1);
+
+          if (exerciseCounter == 0) {
+            if (setCounter < numberOfSets) {
+              restCounter = restInterval;
+            } else {
+              if (cycleCounter < numberOfCycles) {
+                recoveryCounter = recoveryInterval;
+              } else {
+                setElement("counterLabel", null);
+                setElement("counter", "done");
+                setCounterColor("done");
+                setElement("upnextLabel", null);
+                setElement("upnext", null);
+                clearInterval(interval);
+              }
+            }
+          }
+        } else if (restCounter > 0) {
+          restCounter = (restCounter - 0.1).toFixed(1);
+
+          if (restCounter == 0) {
+            if (setCounter < numberOfSets) {
+              setCounter++;
+              exerciseCounter = exerciseInterval;
+            }
+          }
+        } else if (recoveryCounter > 0) {
+          recoveryCounter = (recoveryCounter - 0.1).toFixed(1);
+
+          if (recoveryCounter == 0) {
+            if (cycleCounter < numberOfCycles) {
+              cycleCounter++;
+              setCounter = 1;
+              exerciseCounter = exerciseInterval;
+            }
+          }
+        }
+
+        displayCounters();
+      };
+
+      const reset = () => {
+        console.log("reset");
+
+        pause();
+
+        warmupCounter = warmupInterval;
+        exerciseCounter = 0.0;
+        restCounter = 0.0;
+        setCounter = 1;
+        recoveryCounter = 0.0;
+        cycleCounter = 1;
+
+        displayCounters();
+      };
+
+      const playPause = () => {
+        console.log("play / pause");
+
+        if (!interval) {
+          interval = setInterval(actionLoop, 100);
+        } else {
+          pause();
+        }
+      };
+
+      const pause = () => {
+        console.log("pause");
+
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+      };
+
+      const back = () => {
+        console.log("back");
+
+        pause();
+
+        switch (currentCounterType) {
+          case "warmup":
+            warmupCounter = warmupInterval;
+            break;
+          case "exercise":
+            exerciseCounter = exerciseInterval;
+            break;
+          case "rest":
+            restCounter = restInterval;
+            break;
+          case "recovery":
+            recoveryCounter = recoveryInterval;
+            break;
+        }
+
+        displayCounters();
+      };
+
+      reset();
+      displayCounters();
+    </script>
+  </body>
+</html>
+
+<!-- file:///Users/brtx/repos/sync-training-plan/tabata.html?warmup=5&exercise=4&sets=2&recovery=10&cycles=2 -->
