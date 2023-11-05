@@ -319,11 +319,14 @@
       reset();
       displayCounters();
 
-      if (document.webkitFullscreenElement) {
-        document.webkitCancelFullScreen();
-      } else {
-        const el = document.documentElement;
-        el.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+      const docEl = document.getElementById("body"); // Remove as any if not using typescript
+      if (docEl) {
+        if (docEl.requestFullscreen) docEl.requestFullscreen();
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+        else if (docEl.mozRequestFullScreen)
+          docEl.mozRequestFullScreen(); // Careful to the capital S
+        else if (docEl.msRequestFullscreen) docEl.msRequestFullscreen();
+        else if (docEl.webkitEnterFullscreen) docEl.webkitEnterFullscreen(); // Magic is here for iOS
       }
     </script>
   </body>
