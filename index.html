@@ -319,7 +319,8 @@
       reset();
       displayCounters();
 
-      const docEl = document.getElementById("body"); // Remove as any if not using typescript
+      // this does not work :-(
+      const docEl = document.getElementById("body");
       if (docEl) {
         if (docEl.requestFullscreen) docEl.requestFullscreen();
         else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
@@ -333,3 +334,20 @@
 </html>
 
 <!-- file:///Users/brtx/repos/sync-training-plan/tabata.html?warmup=5&exercise=4&sets=2&recovery=10&cycles=2 -->
+<!-- 
+- full screen
+  - should be coming with iOS 17.2
+  - https://developer.apple.com/forums/thread/133248 (last post)
+  - https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API
+  - https://developer.mozilla.org/en-US/docs/Web/API/Fullscreen_API/Guide
+  - https://webkit.org/blog/13966/webkit-features-in-safari-16-4/#web-api
+  - https://developer.apple.com/documentation/safari-release-notes/safari-17_2-release-notes
+  - https://stackoverflow.com/questions/12822739/full-screen-api-html5-and-safari-ios-6
+  - https://developer.apple.com/documentation/webkitjs/htmlvideoelement/1633500-webkitenterfullscreen
+  - https://stackoverflow.com/questions/28474288/webkitrequestfullscreen-not-working/73478424#73478424
+  - https://stackoverflow.com/questions/16485919/open-webpage-in-fullscreen-in-safari-on-ios
+- display total time
+- back & forward
+- change params via ui 
+- better beep
+-->
