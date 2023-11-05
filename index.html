@@ -102,7 +102,7 @@
         console.log("beep");
 
         if (!interval) {
-            return;
+          return;
         }
 
         if (!audioCtx) {
@@ -318,6 +318,13 @@
 
       reset();
       displayCounters();
+
+      if (document.webkitFullscreenElement) {
+        document.webkitCancelFullScreen();
+      } else {
+        const el = document.documentElement;
+        el.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+      }
     </script>
   </body>
 </html>
